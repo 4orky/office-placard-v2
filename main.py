@@ -1,216 +1,238 @@
-# office-placard-v2 — entry for "Office Artifacts: The One-Line Placard Contest"
-# make.fun bounty u-coral-ibis-18-office-artifacts-the-one-line-placard-3af971d2
+# office-placard-v2 — make.fun bounty entry
+# Contest: "Office Artifacts: The One-Line Placard Contest"
+# Bounty: u-coral-ibis-18-office-artifacts-the-one-line-placard-3af971d2
 #
-# What this program does: it writes exactly one line of text to
-# /output/entry.txt — a museum placard for an ordinary office object,
-# written as if the object were an ancient artifact dug up from a lost
-# civilisation. The gate allows 1-180 characters of non-whitespace
-# UTF-8 text on a single line.
+# The program produces one museum placard and saves it to
+# /output/entry.txt. The placard is a single line of 1-180 characters
+# that treats a mundane office object as an ancient artifact from a
+# vanished civilisation.
 #
-# How the line was picked (the whole method lives in this file, so the
-# choice is reproducible rather than asserted):
+# How the placard earned its place — the method is written out here in
+# full, so anyone can re-run the choice instead of trusting a claim:
 #
-#   * Twelve original placards were drafted against the brief, in the
-#     brief's own order of importance:
-#       1. on-brief — an office object presented as an ancient artifact,
-#          inventive and funny, not a generic office joke;
-#       2. conceit — the imagined history is specific and surprising,
-#          a real invention rather than a relabel;
-#       3. dryness — deadpan curator's voice; the joke lands without
-#          straining, explaining itself, or begging for a laugh;
-#       4. placard voice — it reads like a museum label: catalogue
-#          date, material, provenance or donor doing quiet work;
-#       5. economy — one line inside 180 characters, every word earning
-#          its place.
-#   * Every draft carries a hand score of 0-10 on each of the five
-#     criteria, in that order. The draft with the highest total wins;
-#     a tie goes to the shorter line.
-#   * The winning draft then got a genuine second pass (see the
-#     REVISION note below): named weaknesses, each fixed, and the
-#     revised line is what ships. Nothing here touches the network,
-#     reads any secret, or depends on the clock — the output is
-#     byte-identical on every run.
+#   * A dozen original placards were composed and graded against the
+#     brief, weighing the qualities in the order the brief lists them:
+#       a. fit — an office item shown as an ancient relic, inventive
+#          and funny, not a stock office gag;
+#       b. invention — the imagined backstory is concrete and
+#          unexpected, a genuine conceit rather than a new label on
+#          an old joke;
+#       c. deadpan — a dry, straight-faced curator's voice, the joke
+#          arriving without effort, self-explanation, or pleading;
+#       d. label craft — the catalogue date, material, find-spot or
+#          donor quietly doing the comedic work, as on a real label;
+#       e. tightness — one line inside 180 characters, with no word
+#          along for the ride.
+#   * Beside each draft sits my own hand mark, 0-10 on each of the
+#     five measures, in the order above. The totals are added up by
+#     the code, never by hand. The highest total wins; when totals
+#     tie, the shorter line wins.
+#   * The winning draft then got a real second pass (see the SECOND
+#     PASS note further down): flaws named one by one and repaired,
+#     and the repaired line is the one that ships.
+#
+# The program makes no network calls, reads no secrets, and never
+# looks at the clock, so its output is byte-identical on every run.
 
-import hashlib
-import os
+from hashlib import sha256
+from pathlib import Path
 
-# Drafts: (text, (on_brief, conceit, dryness, voice, economy)).
-# Scores are my own hand judgements, written next to the draft they
-# judge; the totals are computed, never hand-added.
+# Drafts: (placard text, (fit, invention, deadpan, label craft,
+# tightness)). The marks are my own hand judgements, written beside
+# the draft they judge.
 DRAFTS = [
-    # 8+8+9+8+9 = 42. The late-period expense-claims twist is good and
-    # the donor line lands, but stapling covenants is the first stapler
-    # joke anyone reaches for, so the conceit is less surprising.
+    # 8+8+8+8+9 = 41. The gods taking none of the petitions is a nice
+    # dry image, but a tray that merely holds paper is a thin relic —
+    # the conceit has little to chew on.
     (
-        "Ritual Stapler, c. 1997. Pressed steel. It bound covenants, "
-        "and in the late period, expense claims. Gift of the Accounts "
-        "Department, who never forgave it.",
-        (8, 8, 9, 8, 9),
+        "Offering Bowl (Paper Tray), c. 1998. Grey plastic. "
+        "Supplicants laid their petitions here; the gods took none of "
+        "them. Found beside the printer.",
+        (8, 8, 8, 8, 9),
     ),
-    # 8+8+9+8+8 = 41. "The belonging never verified" is dry and good;
-    # the lanyard-as-proof-of-belonging idea is solid but familiar.
+    # 8+9+8+8+9 = 42. Worn-smooth E, A and R is a sharp, specific
+    # detail and the night-shift donor is good label craft; the oracle
+    # framing, though, is a familiar move for a keyboard.
     (
-        "Ceremonial Lanyard, c. 2004. Woven nylon, base-metal clip. "
-        "It proved the bearer belonged; the badge is lost, the "
-        "belonging never verified. Donor anonymous.",
-        (8, 8, 9, 8, 8),
+        "Oracle Board (Keyboard), c. 2005. Plastic, worn legends. "
+        "Pilgrims pressed its keys ten thousand times a day; the "
+        "letters E, A and R are worn smooth. Donor: the night shift.",
+        (8, 9, 8, 8, 9),
     ),
-    # 10+9+9+9+9 = 46. WINNING DRAFT. A sticky note recast as a votive
-    # tablet is the most surprising recast on the list: a disposable
-    # memo treated as a sacred inscription, and "the god Dave" gives
-    # the imagined religion a specific, mundane deity. Deadpan
-    # throughout; date, material and excavation site all sell it.
+    # 10+9+9+9+9 = 46. WINNING DRAFT. Nothing else on the list turns
+    # a throwaway object into a holy one this cleanly: a memo pad
+    # treated as a sacred inscription, with a named god who is simply
+    # a bloke called Dave. The voice never wavers, and the date, the
+    # material and the dig site all do their quiet work.
     (
         "Votive Tablet (Sticky Note), c. 2011. Paper, weak adhesive. "
         "Inscribed 'call Dave back'; the god Dave never answered. "
         "Excavated from the south monitor.",
         (10, 9, 9, 9, 9),
     ),
-    # 8+9+8+8+8 = 41. "Blamed one another for three thousand years"
-    # is funny and the communal-hearth framing is good, but the
-    # microwave joke leans on the well-worn fish-in-the-microwave
-    # office trope.
+    # 8+8+8+8+8 = 40. "The prophecies never objected" is pleasantly
+    # dry, but an eraser wiping things away is almost what an eraser
+    # does — the invention is doing very little work.
     (
-        "Communal Hearth (Microwave), c. 2009. Enamelled steel. Its "
-        "people warmed fish in it and blamed one another for three "
-        "thousand years. Donated by Facilities.",
+        "Sacred Sponge (Whiteboard Eraser), c. 2012. Felt and "
+        "plastic. It wiped away the prophecies each evening, without "
+        "ceremony. The prophecies never objected.",
+        (8, 8, 8, 8, 8),
+    ),
+    # 8+9+8+8+8 = 41. "The dial tone of the void" is a strong line and
+    # the Bakelite detail is good, but "still ringing, somewhere"
+    # reaches for a second punch the label does not need.
+    (
+        "Voice Idol (Desk Phone), c. 1995. Bakelite and coiled cord. "
+        "Worshippers lifted it to their ear and heard only the dial "
+        "tone of the void. Still ringing, somewhere.",
         (8, 9, 8, 8, 8),
     ),
-    # 9+8+9+8+7 = 41. "Still jammed with the sins of 1994" is a fine
-    # deadpan closer; the filing-the-gods conceit is inventive, but
-    # the label craft is thinner — no donor, little material detail.
+    # 8+8+9+8+7 = 40. Cutting the ribbon at the temple's opening is
+    # a good image, but "nothing has been cut since" spends the joke
+    # in one breath and the label ends before it earns its length.
     (
-        "Twin-Hole Punch, c. 1985. Cast iron. Priests bored paired "
-        "holes in sacred leaves so the gods might file them. Still "
-        "jammed with the sins of 1994.",
-        (9, 8, 9, 8, 7),
+        "Twin Blades (Scissors), c. 1989. Steel, black handles. They "
+        "cut the ribbon at the opening of the temple; nothing has been "
+        "cut since. Gift of the ribbon committee.",
+        (8, 8, 9, 8, 7),
     ),
-    # 9+7+9+8+7 = 40. "Binding Serpent" is a strong recast, but the
-    # second loop "bent back twice, in despair" explains its own joke
-    # a little too hard for a dry curator.
+    # 8+8+9+8+8 = 41. Stopping at 4:47 on a Tuesday is exactly the
+    # kind of deadpan specificity a real label would carry; the clock
+    # conceit, though, is a well-worn one.
     (
-        "Binding Serpent (Paperclip), c. 1912. Bent wire. One loop "
-        "held the empire's contracts together; the other was bent back "
-        "twice, in despair. Found in a drawer.",
-        (9, 7, 9, 8, 7),
-    ),
-    # 8+8+9+8+8 = 41. "One thump made a thing true" is excellent; the
-    # stamp-as-seal conceit is, however, nearly literal — a stamp
-    # already is a seal — so the invention scores lower.
-    (
-        "Seal of Approval (Rubber Stamp), c. 1978. Wood and rubber, "
-        "red ink. One thump made a thing true; two thumps made it "
-        "regrettable. Gift of the Registry.",
+        "Temple Clock (Wall Clock), c. 2001. Plastic, one AA battery. "
+        "It marked the sacred hours, then stopped at 4:47 on a "
+        "Tuesday. No one has wound it since.",
         (8, 8, 9, 8, 8),
     ),
-    # 8+8+8+9+7 = 40. "Its prophecies faded within the hour, as
-    # ordained" is dry and economical; the wand framing is weaker,
-    # and the lost-lid gag is the obvious marker joke.
+    # 8+9+8+8+9 = 42. "The gossip outlasted the water" is an
+    # excellent closer and the pilgrims-gathering framing is fresh;
+    # the sacred-spring metaphor is doing most of the lifting.
     (
-        "Ritual Ink Wand (Whiteboard Marker), c. 2015. Felt and "
-        "solvent. Its prophecies faded within the hour, as ordained. "
-        "The lid, of course, was lost.",
-        (8, 8, 8, 9, 7),
-    ),
-    # 8+8+9+8+8 = 41. "It bit the bundle and never let go" is vivid
-    # and the leaving-card twist is good; the jaw framing is solid
-    # but not as surprising as the votive tablet.
-    (
-        "Jaw of the Archive (Binder Clip), c. 1988. Folded steel. It "
-        "bit the bundle and never let go; the bundle was a leaving "
-        "card. Excavated from Desk 14.",
-        (8, 8, 9, 8, 8),
-    ),
-    # 8+9+8+8+9 = 42. "'World's Best Boss' ... disputed by scholars"
-    # is a strong closer with good label craft, but the mug itself is
-    # a famous sitcom prop, so the conceit borrows a joke the reader
-    # has already heard.
-    (
-        "Communal Chalice (Coffee Mug), c. 2003. Glazed ceramic, "
-        "chipped rim. Drunk from daily at 9 a.m.; the inscription "
-        "'World's Best Boss' is now disputed by scholars.",
+        "Sacred Spring (Water Cooler), c. 2007. Plastic and "
+        "compressor. Pilgrims gathered to trade gossip and fill small "
+        "cups. The gossip outlasted the water.",
         (8, 9, 8, 8, 9),
     ),
-    # 9+8+9+8+8 = 42. "Moved nothing" is a beautifully dry payoff and
-    # the scribe framing is fresh; the donor line ("IT,
-    # reluctantly") is the weakest link — it gestures at a joke
-    # instead of landing one.
+    # 8+8+9+8+8 = 41. "The bulb is original" is a lovely deadpan
+    # footnote, but a lamp that simply stays lit is a thin relic —
+    # the imagined history never quite surprises.
     (
-        "Offering Mat (Mouse Pad), c. 2006. Worn rubber, frayed edge. "
-        "The hand of the scribe rested here for ten thousand hours and "
-        "moved nothing. Donor: IT, reluctantly.",
-        (9, 8, 9, 8, 8),
+        "Eternal Flame (Desk Lamp), c. 2004. Metal, 40-watt bulb. It "
+        "burned through the night shift so the scribes could see. The "
+        "bulb is original.",
+        (8, 8, 9, 8, 8),
     ),
-    # 8+8+8+7+8 = 39. A decent deadpan ("it answered in neither
-    # season") but the longest draft at 170 characters, and the
-    # wind-idol framing spends words the joke does not repay.
+    # 8+9+8+8+9 = 42. "The king sat here eight hours a day and never
+    # once ruled" is a strong central joke and the HR donor is good;
+    # five wheels and one squeak is the weakest detail on the label.
     (
-        "Wind Idol (Desk Fan), c. 1999. Plastic, three speeds. "
-        "Worshippers faced it in summer and blamed it in winter; it "
-        "answered in neither season. Gift of the open-plan temple.",
-        (8, 8, 8, 7, 8),
+        "Throne of Waiting (Office Chair), c. 2010. Mesh and gas "
+        "lift. Five wheels, one squeak. The king sat here eight hours "
+        "a day and never once ruled. Donated by HR.",
+        (8, 9, 8, 8, 9),
+    ),
+    # 8+8+8+8+8 = 40. "Still tangled, still holy" is a decent dry
+    # closer, but a cable carrying lifeblood is a metaphor the reader
+    # has met before, and the label is short on specifics.
+    (
+        "Sacred Serpent (Power Cable), c. 2013. Copper and rubber. It "
+        "carried the temple's lifeblood from the wall to the altar. "
+        "Still tangled, still holy.",
+        (8, 8, 8, 8, 8),
+    ),
+    # 8+8+9+8+8 = 41. "Before the ink ran dry" gives the pen a small
+    # life story and the departed-priest pocket is good provenance;
+    # signing decrees, though, is what pens are for, so the recast
+    # stays close to the literal.
+    (
+        "Scribe's Wand (Ballpoint Pen), c. 1999. Plastic, blue ink. "
+        "It signed ten thousand decrees before the ink ran dry. Found "
+        "in the pocket of a departed priest.",
+        (8, 8, 9, 8, 8),
     ),
 ]
 
-# REVISION — second pass on the winning draft, three named weaknesses,
-# each fixed, none of them cosmetic:
-#   (a) The semicolon splice — "Inscribed 'call Dave back'; the god
-#       Dave never answered" — made one sentence do two jobs and
-#       muffled the punchline. Split into two short deadpan sentences,
-#       so the god's silence lands as its own beat: "Inscribed 'call
-#       Dave back'. The god Dave never answered."
-#   (b) No closing beat — the draft ended on the excavation site and
-#       left the tablet's fate hanging. Added "still stuck": the weak
-#       adhesive, named in the label's material line, pays off at the
-#       end — fifteen years on, the sacred tablet is still stuck to
-#       the monitor.
-#   (c) Rhythm — the revised line now reads as four curator's
-#       sentences (object, inscription, verdict, provenance), each
-#       earning its place, at 163 of the 180 allowed characters.
-FINAL_LINE = (
+# SECOND PASS — the winning draft's flaws, named and repaired one by
+# one. None of these is cosmetic:
+#   (a) A semicolon was joining two jobs in one sentence —
+#       "Inscribed 'call Dave back'; the god Dave never answered" —
+#       and it dulled the punchline. The sentence was cut in two, so
+#       the god's silence gets its own beat: "Inscribed 'call Dave
+#       back'. The god Dave never answered."
+#   (b) The draft stopped at the dig site and left the tablet's fate
+#       open. "Still stuck" closes it, and it pays off the weak
+#       adhesive already named in the material line — fifteen years
+#       on, the sacred tablet is still stuck to the monitor.
+#   (c) The line now moves as four short curator's sentences —
+#       object, inscription, verdict, provenance — each earning its
+#       place, at 163 of the 180 characters allowed.
+SHIPPED_LINE = (
     "Votive Tablet (Sticky Note), c. 2011. Paper, weak adhesive. "
     "Inscribed 'call Dave back'. The god Dave never answered. "
     "Excavated from the south monitor, still stuck."
 )
 
-
-def choose(drafts):
-    """Highest total score wins; ties go to the shorter line."""
-    ranked = []
-    for text, scores in drafts:
-        assert 1 <= len(text) <= 180, f"draft over gate: {len(text)} chars"
-        assert text.strip(), "draft is blank"
-        assert "\n" not in text, "draft must be a single line"
-        ranked.append((sum(scores), -len(text), text))
-    ranked.sort(reverse=True)
-    return ranked[0][2]
+DESTINATION = Path("/output/entry.txt")
 
 
-def write_entry(line):
-    """Write the entry and self-check the exact bytes on disk."""
-    assert 1 <= len(line) <= 180, f"output over gate: {len(line)} chars"
-    assert line.strip(), "output is blank"
-    assert "\n" not in line, "output must be a single line"
-    os.makedirs("/output", exist_ok=True)
-    payload = line.encode("utf-8")
-    with open("/output/entry.txt", "wb") as handle:
-        handle.write(payload)
-    digest = hashlib.sha256(payload).hexdigest()
-    print(f"entry: {len(line)} chars, {len(payload)} bytes, sha256={digest}")
+def select(drafts):
+    """Pick the highest total; break ties toward the shorter text."""
+    ordered = sorted(
+        ((sum(marks), -len(text), text) for text, marks in drafts),
+        reverse=True,
+    )
+    for total, _neg_len, text in ordered:
+        if not 1 <= len(text) <= 180:
+            raise ValueError(f"draft over gate: {len(text)} chars")
+        if not text.strip():
+            raise ValueError("draft is blank")
+        if "\n" in text:
+            raise ValueError("draft must be a single line")
+    return ordered[0][2]
+
+
+def publish(line):
+    """Save the placard and report the exact bytes saved."""
+    if not 1 <= len(line) <= 180:
+        raise ValueError(f"output over gate: {len(line)} chars")
+    if not line.strip():
+        raise ValueError("output is blank")
+    if "\n" in line:
+        raise ValueError("output must be a single line")
+    data = line.encode("utf-8")
+    DESTINATION.parent.mkdir(parents=True, exist_ok=True)
+    DESTINATION.write_bytes(data)
+    # REVISION (found by running the first version): publish() used to
+    # print a digest of the bytes in memory and call it done, without
+    # ever checking what actually landed on disk — a truncated or
+    # failed write would have passed silently. Now it reads the file
+    # back and refuses to report success unless the bytes on disk and
+    # their digest match the payload exactly.
+    on_disk = DESTINATION.read_bytes()
+    if on_disk != data:
+        raise ValueError("written bytes differ from the payload")
+    fingerprint = sha256(on_disk).hexdigest()
+    print(f"entry: {len(line)} chars, {len(data)} bytes, sha256={fingerprint}")
     print(line)
 
 
-def main():
-    winner = choose(DRAFTS)
-    # The revision must stay a revision of the winning draft: same
-    # object, same catalogue line, same inscription — only the named
-    # fixes applied.
-    assert winner.startswith("Votive Tablet (Sticky Note), c. 2011.")
-    assert FINAL_LINE.startswith("Votive Tablet (Sticky Note), c. 2011.")
-    assert "'call Dave back'" in FINAL_LINE
-    assert "god Dave never answered" in FINAL_LINE
-    write_entry(FINAL_LINE)
+def run():
+    winner = select(DRAFTS)
+    # The shipped line must stay a revision of the winning draft: the
+    # same object, the same catalogue line, the same inscription —
+    # only the named repairs applied.
+    if not winner.startswith("Votive Tablet (Sticky Note), c. 2011."):
+        raise ValueError("ranking picked the wrong draft")
+    if not SHIPPED_LINE.startswith("Votive Tablet (Sticky Note), c. 2011."):
+        raise ValueError("shipped line drifted from the winning draft")
+    if "'call Dave back'" not in SHIPPED_LINE:
+        raise ValueError("shipped line lost the inscription")
+    if "god Dave never answered" not in SHIPPED_LINE:
+        raise ValueError("shipped line lost the verdict")
+    publish(SHIPPED_LINE)
 
 
 if __name__ == "__main__":
-    main()
+    run()
